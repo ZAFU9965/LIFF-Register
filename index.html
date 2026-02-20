@@ -32,21 +32,26 @@
     async function main() {
       const statusDiv = document.getElementById('initStatus');
       try {
+        statusDiv.innerText = "GitHub สเต็ป 1: กำลัง liff.init()...";
         await liff.init({ liffId: MY_LIFF_ID });
         
+        statusDiv.innerText = "GitHub สเต็ป 2: ตรวจสอบ Login...";
         if (!liff.isLoggedIn()) {
+          statusDiv.innerText = "กำลังพาไปหน้า Login...";
           liff.login();
           return;
         }
 
+        statusDiv.innerText = "GitHub สเต็ป 3: กำลังดึง Profile...";
         const profile = await liff.getProfile();
         userLineId = profile.userId;
         
+        // ถ้าดึงข้อมูลสำเร็จ จะซ่อนข้อความและโชว์ฟอร์ม
         statusDiv.style.display = 'none';
         document.getElementById('formSection').style.display = 'block';
 
       } catch (err) {
-        statusDiv.innerText = "❌ Error: " + err.message;
+        statusDiv.innerText = "❌ Error ฝั่ง LINE: " + err.message;
         statusDiv.style.color = "red";
       }
     }
