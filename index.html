@@ -15,7 +15,8 @@
     #formSection, #profileSection { display: none; }
     
     /* กล่องสำหรับแสดงข้อมูล */
-    .profile-card { background: #f9f9f9; padding: 20px; border-radius: 10px; margin-top: 20px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .profile-card { background: #f9f9f9; padding: 20px; border-radius: 10px; margin-top: 20px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1); line-height: 1.6; }
+    .profile-card p { margin: 8px 0; }
   </style>
 </head>
 <body>
@@ -35,13 +36,17 @@
   <div id="profileSection">
     <h3>ข้อมูลของคุณ</h3>
     <div class="profile-card">
-      <p><strong>ชื่อ-สกุล:</strong> <span id="displayName">-</span></p>
       <p><strong>เลขบัตรประชาชน:</strong> <span id="displayIdCard">-</span></p>
+      <p><strong>ยศ/คำนำหน้า:</strong> <span id="displayRank">-</span></p>
+      <p><strong>ชื่อ:</strong> <span id="displayFirstName">-</span></p>
+      <p><strong>นามสกุล:</strong> <span id="displayLastName">-</span></p>
+      <p><strong>ตำแหน่ง:</strong> <span id="displayPosition">-</span></p>
     </div>
   </div>
 
   <script>
     const MY_LIFF_ID = "2009162197-2HJEdiFz";
+    // ⚠️ อย่าลืมเช็คว่า URL นี้เป็นตัวล่าสุดที่ Deploy ใหม่แล้วหรือยัง
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzvHM4o5uGr8-GC8c1cXIRNCguT-Hgm6SS_Ys4qADQkmrfIRZfPQawJzpdfUUFf_359/exec"; 
 
     let userLineId = "";
@@ -63,20 +68,24 @@
         statusDiv.innerText = "กำลังตรวจสอบประวัติในระบบ...";
         statusDiv.style.color = "blue";
 
-        // ยิง fetch ไปถาม GAS โดยส่งแค่ lineUserId อย่างเดียว (เพื่อเช็คว่าเคยลงทะเบียนไหม)
         const checkUrl = `${GAS_API_URL}?lineUserId=${userLineId}`;
         const response = await fetch(checkUrl);
         const res = await response.json();
 
-        // เมื่อได้คำตอบกลับมา ให้ซ่อนหน้าจอโหลด
+        // ซ่อนหน้าจอโหลด
         document.getElementById('loadingSection').style.display = 'none';
 
         if (res.isRegistered) {
           // โชว์หน้าโปรไฟล์ (คนเก่า)
           document.getElementById('profileSection').style.display = 'block';
-          // สมมติว่า GAS ส่ง name กับ idCard กลับมา
-          document.getElementById('displayName').innerText = res.name || "ไม่พบชื่อ"; 
-          document.getElementById('displayIdCard').innerText = res.idCard || "ไม่พบเลขบัตร"; 
+          
+          // นำข้อมูลที่ได้จาก GAS มายัดใส่แต่ละช่อง
+          document.getElementById('displayIdCard').innerText = res.idCard || "-"; 
+          document.getElementById('displayRank').innerText = res.rank || "-"; 
+          document.getElementById('displayFirstName').innerText = res.firstName || "-"; 
+          document.getElementById('displayLastName').innerText = res.lastName || "-"; 
+          document.getElementById('displayPosition').innerText = res.position || "-"; 
+          
         } else {
           // โชว์ฟอร์มลงทะเบียน (คนใหม่)
           document.getElementById('formSection').style.display = 'block';
@@ -102,7 +111,6 @@
       statusDiv.style.color = "blue";
 
       try {
-        // ลงทะเบียน: ส่งไปทั้ง idCard และ lineUserId
         const urlWithParams = `${GAS_API_URL}?idCard=${idCard}&lineUserId=${userLineId}`;
         const response = await fetch(urlWithParams);
         const res = await response.json();
@@ -111,7 +119,6 @@
           statusDiv.innerText = "✅ บันทึกสำเร็จ! สวัสดีคุณ " + res.name;
           statusDiv.style.color = "green";
           
-          // โหลดหน้าใหม่เพื่อให้มันดึงข้อมูลล่าสุดมาโชว์ในหน้าโปรไฟล์
           setTimeout(() => {
             location.reload(); 
           }, 2000);
@@ -126,7 +133,6 @@
       }
     }
 
-    // เริ่มทำงาน
     main();
   </script>
 </body>
