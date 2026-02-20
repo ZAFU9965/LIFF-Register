@@ -65,14 +65,11 @@
       statusDiv.style.color = "blue";
 
       try {
-        // ใช้ fetch คุยกับ Google Apps Script
-        const response = await fetch(GAS_API_URL, {
-          method: 'POST',
-          redirect: 'follow', // จำเป็นมากสำหรับ GAS
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // ป้องกันเรื่อง CORS
-          body: JSON.stringify({ idCard: idCard, lineUserId: userLineId })
-        });
-
+        // นำข้อมูลเลขบัตรและ LINE ID ไปต่อท้าย URL (เป็นวิธีที่ชัวร์ที่สุด)
+        const urlWithParams = `${GAS_API_URL}?idCard=${idCard}&lineUserId=${userLineId}`;
+        
+        // ยิงข้อมูลไปหา Google Apps Script
+        const response = await fetch(urlWithParams);
         const res = await response.json();
 
         if (res.status === 'success') {
@@ -86,7 +83,6 @@
         statusDiv.innerText = "❌ Error เซิร์ฟเวอร์: " + error.message;
         statusDiv.style.color = "red";
       }
-    }
 
     main();
   </script>
