@@ -3,31 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ลงทะเบียน</title>
+  <title>ระบบฐานข้อมูล</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; text-align: center; }
     input { width: 100%; padding: 12px; margin: 15px 0; font-size: 16px; box-sizing: border-box; }
     button { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; font-size: 16px; border-radius: 8px; cursor: pointer; }
     #status { margin-top: 15px; font-weight: bold; }
+    
+    /* ซ่อนฟอร์มและหน้าโปรไฟล์ไว้ก่อน */
+    #formSection, #profileSection { display: none; }
+    
+    /* กล่องสำหรับแสดงข้อมูล */
+    .profile-card { background: #f9f9f9; padding: 20px; border-radius: 10px; margin-top: 20px; text-align: left; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
-  <h2>ลงทะเบียนใช้งาน</h2>
+  <h2>ระบบฐานข้อมูล</h2>
   
-  <p id="initStatus" style="color: gray;">กำลังโหลดเว็บ...</p>
+  <div id="loadingSection">
+    <p id="initStatus" style="color: gray;">กำลังเชื่อมต่อ LINE...</p>
+  </div>
   
-  <div id="formSection" style="display:none;">
+  <div id="formSection">
+    <h3>ลงทะเบียนใช้งาน</h3>
     <input type="number" id="idCard" placeholder="กรอกเลขบัตรประชาชน 13 หลัก">
     <button onclick="submitData()">บันทึกข้อมูล</button>
     <div id="status"></div>
   </div>
 
-  <script>
-    // ทันทีที่โหลดหน้านี้ จะต้องโชว์ข้อความนี้ก่อน (ถ้าไม่โชว์ แปลว่าลิงก์พัง)
-    document.getElementById('initStatus').innerText = "JS เริ่มทำงานแล้ว! กำลังเชื่อมต่อ LINE...";
+  <div id="profileSection">
+    <h3>ข้อมูลของคุณ</h3>
+    <div class="profile-card">
+      <p><strong>ชื่อ-สกุล:</strong> <span id="displayName">-</span></p>
+      <p><strong>เลขบัตรประชาชน:</strong> <span id="displayIdCard">-</span></p>
+    </div>
+  </div>
 
-    // ⚠️ สำคัญมาก: ตอนวางลิงก์ "ห้าม" ลบเครื่องหมายคำพูด (") ออกเด็ดขาด
+  <script>
     const MY_LIFF_ID = "2009162197-2HJEdiFz";
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzvHM4o5uGr8-GC8c1cXIRNCguT-Hgm6SS_Ys4qADQkmrfIRZfPQawJzpdfUUFf_359/exec"; 
 
@@ -47,12 +60,30 @@
         const profile = await liff.getProfile();
         userLineId = profile.userId;
         
-        // ถ้าสำเร็จ ซ่อนข้อความแล้วโชว์ฟอร์ม
-        statusDiv.style.display = 'none';
-        document.getElementById('formSection').style.display = 'block';
+        statusDiv.innerText = "กำลังตรวจสอบประวัติในระบบ...";
+        statusDiv.style.color = "blue";
+
+        // ยิง fetch ไปถาม GAS โดยส่งแค่ lineUserId อย่างเดียว (เพื่อเช็คว่าเคยลงทะเบียนไหม)
+        const checkUrl = `${GAS_API_URL}?lineUserId=${userLineId}`;
+        const response = await fetch(checkUrl);
+        const res = await response.json();
+
+        // เมื่อได้คำตอบกลับมา ให้ซ่อนหน้าจอโหลด
+        document.getElementById('loadingSection').style.display = 'none';
+
+        if (res.isRegistered) {
+          // โชว์หน้าโปรไฟล์ (คนเก่า)
+          document.getElementById('profileSection').style.display = 'block';
+          // สมมติว่า GAS ส่ง name กับ idCard กลับมา
+          document.getElementById('displayName').innerText = res.name || "ไม่พบชื่อ"; 
+          document.getElementById('displayIdCard').innerText = res.idCard || "ไม่พบเลขบัตร"; 
+        } else {
+          // โชว์ฟอร์มลงทะเบียน (คนใหม่)
+          document.getElementById('formSection').style.display = 'block';
+        }
 
       } catch (err) {
-        statusDiv.innerText = "❌ Error ฝั่ง LINE: " + err.message;
+        statusDiv.innerText = "❌ Error: " + err.message;
         statusDiv.style.color = "red";
       }
     }
@@ -67,10 +98,11 @@
         return;
       }
 
-      statusDiv.innerText = "กำลังตรวจสอบฐานข้อมูล...";
+      statusDiv.innerText = "กำลังตรวจสอบและบันทึกข้อมูล...";
       statusDiv.style.color = "blue";
 
       try {
+        // ลงทะเบียน: ส่งไปทั้ง idCard และ lineUserId
         const urlWithParams = `${GAS_API_URL}?idCard=${idCard}&lineUserId=${userLineId}`;
         const response = await fetch(urlWithParams);
         const res = await response.json();
@@ -78,6 +110,12 @@
         if (res.status === 'success') {
           statusDiv.innerText = "✅ บันทึกสำเร็จ! สวัสดีคุณ " + res.name;
           statusDiv.style.color = "green";
+          
+          // โหลดหน้าใหม่เพื่อให้มันดึงข้อมูลล่าสุดมาโชว์ในหน้าโปรไฟล์
+          setTimeout(() => {
+            location.reload(); 
+          }, 2000);
+
         } else {
           statusDiv.innerText = "❌ " + res.message;
           statusDiv.style.color = "red";
@@ -88,6 +126,7 @@
       }
     }
 
+    // เริ่มทำงาน
     main();
   </script>
 </body>
