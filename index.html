@@ -36,7 +36,6 @@
   <div id="profileSection">
     <h3>ข้อมูลของคุณ</h3>
     <div class="profile-card">
-      <p><strong>เลขบัตรประชาชน:</strong> <span id="displayIdCard">-</span></p>
       <p><strong>ยศ/คำนำหน้า:</strong> <span id="displayRank">-</span></p>
       <p><strong>ชื่อ:</strong> <span id="displayFirstName">-</span></p>
       <p><strong>นามสกุล:</strong> <span id="displayLastName">-</span></p>
@@ -46,7 +45,6 @@
 
   <script>
     const MY_LIFF_ID = "2009162197-2HJEdiFz";
-    // ⚠️ อย่าลืมเช็คว่า URL นี้เป็นตัวล่าสุดที่ Deploy ใหม่แล้วหรือยัง
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzvHM4o5uGr8-GC8c1cXIRNCguT-Hgm6SS_Ys4qADQkmrfIRZfPQawJzpdfUUFf_359/exec"; 
 
     let userLineId = "";
@@ -79,8 +77,7 @@
           // โชว์หน้าโปรไฟล์ (คนเก่า)
           document.getElementById('profileSection').style.display = 'block';
           
-          // นำข้อมูลที่ได้จาก GAS มายัดใส่แต่ละช่อง
-          document.getElementById('displayIdCard').innerText = res.idCard || "-"; 
+          // นำข้อมูลที่ได้จาก GAS มายัดใส่แต่ละช่อง (เอา idCard ออกแล้ว)
           document.getElementById('displayRank').innerText = res.rank || "-"; 
           document.getElementById('displayFirstName').innerText = res.firstName || "-"; 
           document.getElementById('displayLastName').innerText = res.lastName || "-"; 
