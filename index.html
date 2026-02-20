@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ลงทะเบียน</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; text-align: center; }
+    input { width: 100%; padding: 12px; margin: 15px 0; font-size: 16px; box-sizing: border-box; }
+    button { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; font-size: 16px; border-radius: 8px; cursor: pointer; }
+    #status { margin-top: 15px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>ลงทะเบียนใช้งาน</h2>
+  
+  <p id="initStatus" style="color: gray;">กำลังโหลด LIFF...</p>
+  
+  <div id="formSection" style="display:none;">
+    <input type="number" id="idCard" placeholder="กรอกเลขบัตรประชาชน 13 หลัก">
+    <button onclick="submitData()">บันทึกข้อมูล</button>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    const MY_LIFF_ID = "2009162197-2HJEdiFz"; // LIFF ID ของคุณ
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwXSTXvoa7kcjebf9SSHFxkGPuIGnkpmSw5mnhAHRAPFd550_I2ghAO328Q7n0qkKPL/exec"; // <--- ลบข้อความแล้ววางลิงก์ Apps Script ของคุณตรงนี้
+
+    let userLineId = "";
+
+    async function main() {
+      const statusDiv = document.getElementById('initStatus');
+      try {
+        await liff.init({ liffId: MY_LIFF_ID });
+        
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+
+        const profile = await liff.getProfile();
+        userLineId = profile.userId;
+        
+        statusDiv.style.display = 'none';
+        document.getElementById('formSection').style.display = 'block';
+
+      } catch (err) {
+        statusDiv.innerText = "❌ Error: " + err.message;
+        statusDiv.style.color = "red";
+      }
+    }
+
+    async function submitData() {
+      const idCard = document.getElementById('idCard').value;
+      const statusDiv = document.getElementById('status');
+      
+      if (idCard.length !== 13) {
+        statusDiv.innerText = "กรุณากรอกเลขบัตรให้ครบ 13 หลัก";
+        statusDiv.style.color = "red";
+        return;
+      }
+
+      statusDiv.innerText = "กำลังเชื่อมต่อฐานข้อมูล...";
+      statusDiv.style.color = "blue";
+
+      try {
+        // ใช้ fetch คุยกับ Google Apps Script
+        const response = await fetch(GAS_API_URL, {
+          method: 'POST',
+          redirect: 'follow', // จำเป็นมากสำหรับ GAS
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // ป้องกันเรื่อง CORS
+          body: JSON.stringify({ idCard: idCard, lineUserId: userLineId })
+        });
+
+        const res = await response.json();
+
+        if (res.status === 'success') {
+          statusDiv.innerText = "✅ บันทึกสำเร็จ! สวัสดีคุณ " + res.name;
+          statusDiv.style.color = "green";
+        } else {
+          statusDiv.innerText = "❌ " + res.message;
+          statusDiv.style.color = "red";
+        }
+      } catch (error) {
+        statusDiv.innerText = "❌ Error เซิร์ฟเวอร์: " + error.message;
+        statusDiv.style.color = "red";
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>
