@@ -15,7 +15,7 @@
 <body>
   <h2>ลงทะเบียนใช้งาน</h2>
   
-  <p id="initStatus" style="color: gray;">กำลังโหลด LIFF...</p>
+  <p id="initStatus" style="color: gray;">กำลังโหลดเว็บ...</p>
   
   <div id="formSection" style="display:none;">
     <input type="number" id="idCard" placeholder="กรอกเลขบัตรประชาชน 13 หลัก">
@@ -24,29 +24,30 @@
   </div>
 
   <script>
-    const MY_LIFF_ID = "2009162197-2HJEdiFz"; // LIFF ID ของคุณ
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzvHM4o5uGr8-GC8c1cXIRNCguT-Hgm6SS_Ys4qADQkmrfIRZfPQawJzpdfUUFf_359/exec"; // <--- ลบข้อความแล้ววางลิงก์ Apps Script ของคุณตรงนี้
+    // ทันทีที่โหลดหน้านี้ จะต้องโชว์ข้อความนี้ก่อน (ถ้าไม่โชว์ แปลว่าลิงก์พัง)
+    document.getElementById('initStatus').innerText = "JS เริ่มทำงานแล้ว! กำลังเชื่อมต่อ LINE...";
+
+    // ⚠️ สำคัญมาก: ตอนวางลิงก์ "ห้าม" ลบเครื่องหมายคำพูด (") ออกเด็ดขาด
+    const MY_LIFF_ID = "2009162197-2HJEdiFz";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzvHM4o5uGr8-GC8c1cXIRNCguT-Hgm6SS_Ys4qADQkmrfIRZfPQawJzpdfUUFf_359/exec"; 
 
     let userLineId = "";
 
     async function main() {
       const statusDiv = document.getElementById('initStatus');
       try {
-        statusDiv.innerText = "GitHub สเต็ป 1: กำลัง liff.init()...";
         await liff.init({ liffId: MY_LIFF_ID });
         
-        statusDiv.innerText = "GitHub สเต็ป 2: ตรวจสอบ Login...";
         if (!liff.isLoggedIn()) {
           statusDiv.innerText = "กำลังพาไปหน้า Login...";
           liff.login();
           return;
         }
 
-        statusDiv.innerText = "GitHub สเต็ป 3: กำลังดึง Profile...";
         const profile = await liff.getProfile();
         userLineId = profile.userId;
         
-        // ถ้าดึงข้อมูลสำเร็จ จะซ่อนข้อความและโชว์ฟอร์ม
+        // ถ้าสำเร็จ ซ่อนข้อความแล้วโชว์ฟอร์ม
         statusDiv.style.display = 'none';
         document.getElementById('formSection').style.display = 'block';
 
@@ -66,14 +67,11 @@
         return;
       }
 
-      statusDiv.innerText = "กำลังเชื่อมต่อฐานข้อมูล...";
+      statusDiv.innerText = "กำลังตรวจสอบฐานข้อมูล...";
       statusDiv.style.color = "blue";
 
       try {
-        // นำข้อมูลเลขบัตรและ LINE ID ไปต่อท้าย URL (เป็นวิธีที่ชัวร์ที่สุด)
         const urlWithParams = `${GAS_API_URL}?idCard=${idCard}&lineUserId=${userLineId}`;
-        
-        // ยิงข้อมูลไปหา Google Apps Script
         const response = await fetch(urlWithParams);
         const res = await response.json();
 
@@ -88,7 +86,8 @@
         statusDiv.innerText = "❌ Error เซิร์ฟเวอร์: " + error.message;
         statusDiv.style.color = "red";
       }
-//**test**//
+    }
+
     main();
   </script>
 </body>
