@@ -12,7 +12,6 @@
     
     .btn-activity { display: block; width: 100%; padding: 15px; margin: 10px 0; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; text-align: left; }
     .btn-activity:hover { background-color: #0056b3; }
-    /* ปุ่มกิจกรรมที่ปิดรับแล้ว */
     .btn-activity.closed { background-color: #999; }
     
     label { font-weight: bold; display: block; margin-top: 15px; }
@@ -25,6 +24,7 @@
     
     #status, #activityStatusMsg { margin-top: 15px; font-weight: bold; text-align: center; }
     #activityListScreen, #registrationScreen { display: none; }
+    .debug-text { font-size: 12px; color: #888; text-align: center; margin-top: 0; }
   </style>
 </head>
 <body>
@@ -41,7 +41,9 @@
 
     <div id="registrationScreen">
       <h3 id="displayActivityName">ชื่อกิจกรรม</h3>
-      <p id="activityStatusMsg"></p> <label>การเข้าร่วมกิจกรรม:</label>
+      <p id="debugStatus" class="debug-text"></p> <p id="activityStatusMsg"></p> 
+      
+      <label>การเข้าร่วมกิจกรรม:</label>
       <div class="radio-group">
         <input type="radio" id="joinYes" name="joinStatus" value="เข้า" onchange="toggleForm()"> 
         <label for="joinYes" id="lblJoinYes" style="display:inline; font-weight:normal;">เข้าร่วม</label> <br><br>
@@ -63,9 +65,9 @@
   </div>
 
   <script>
-    // ⚠️ 1. ใส่ LIFF ID ตัวที่ 2 (กิจกรรม) ของคุณที่นี่เหมือนเดิม
-    const MY_LIFF_ID = "2009184465-5keukQAB"; 
-    // ⚠️ 2. ใส่ GAS Web App URL เหมือนเดิม
+    // ⚠️ 1. ใส่ LIFF ID กิจกรรมของคุณ
+    const MY_LIFF_ID = "ใส่_LIFF_ID_กิจกรรมที่นี่"; 
+    // ⚠️ 2. ใส่ GAS Web App URL ของคุณ
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzvHM4o5uGr8-GC8c1cXIRNCguT-Hgm6SS_Ys4qADQkmrfIRZfPQawJzpdfUUFf_359/exec"; 
 
     let userLineId = "";
@@ -88,17 +90,17 @@
 
     async function fetchActivities() {
       try {
-        const response = await fetch(`${GAS_API_URL}?action=getActivities`);
+        // ⭐️ ไม้ตายที่ 1: เติมพารามิเตอร์เวลาต่อท้าย URL เพื่อบังคับให้โหลดข้อมูลใหม่เสมอ (ไม่ใช้แคช)
+        const checkUrl = `${GAS_API_URL}?action=getActivities&t=${new Date().getTime()}`;
+        const response = await fetch(checkUrl);
         const res = await response.json();
 
         if (res.status === 'success' && res.data.length > 0) {
           const container = document.getElementById('activityContainer');
           container.innerHTML = ""; 
-          
+
           res.data.forEach(activity => {
             const btn = document.createElement('button');
-            
-            // ⭐️ ดักจับ Error: ถ้าไม่มี status ส่งมา ให้ถือว่าเป็นค่าว่าง "" (เว็บจะได้ไม่พัง)
             const safeStatus = activity.status || ""; 
             
             const isClosed = safeStatus.includes("ปิด") || safeStatus.includes("ไม่เปิด");
@@ -125,13 +127,16 @@
       selectedActivity = activityName;
       document.getElementById('displayActivityName').innerText = `กิจกรรม: ${activityName}`;
       
+      const safeStatus = status || "";
+      
+      // ⭐️ ไม้ตายที่ 2: โชว์ข้อมูลดิบๆ ออกมาให้เห็นบนจอเลยว่าระบบอ่านค่าได้คำว่าอะไร
+      const debugText = safeStatus === "" ? "[ค่าสถานะว่างเปล่า]" : `[สถานะใน Sheet: ${safeStatus}]`;
+      document.getElementById('debugStatus').innerText = debugText;
+      
       const joinYes = document.getElementById('joinYes');
       const joinNo = document.getElementById('joinNo');
       const statusMsg = document.getElementById('activityStatusMsg');
       const lblJoinYes = document.getElementById('lblJoinYes');
-
-      // ⭐️ ดักจับ Error: สร้าง safeStatus กันเหนียว
-      const safeStatus = status || "";
 
       if (safeStatus.includes("ปิด") || safeStatus.includes("ไม่เปิด")) {
         statusMsg.innerText = "❌ กิจกรรมนี้ปิดรับการลงทะเบียนแล้ว";
