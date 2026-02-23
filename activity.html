@@ -103,7 +103,8 @@
             const btn = document.createElement('button');
             const safeStatus = activity.status || ""; 
             
-            const isClosed = safeStatus.includes("ปิด") || safeStatus.includes("ไม่เปิด");
+            // กำหนดไปเลยว่า ถ้าพิมพ์คำว่า "ปิดรับ" หรือ "ปิด" เป๊ะๆ ถึงจะล็อกปุ่ม
+            const isClosed = safeStatus.trim() === "ปิดรับ" || safeStatus.trim() === "ปิด" || safeStatus.trim() === "ไม่เปิดรับ";
             btn.className = isClosed ? 'btn-activity closed' : 'btn-activity';
             
             const statusText = isClosed ? "(ปิดรับแล้ว)" : "";
