@@ -10,23 +10,20 @@
     .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
     h2, h3 { text-align: center; color: #333; }
     
-    /* ปุ่มกิจกรรม */
     .btn-activity { display: block; width: 100%; padding: 15px; margin: 10px 0; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; text-align: left; }
     .btn-activity:hover { background-color: #0056b3; }
+    /* ปุ่มกิจกรรมที่ปิดรับแล้ว */
+    .btn-activity.closed { background-color: #999; }
     
-    /* ฟอร์มและปุ่มลงทะเบียน */
     label { font-weight: bold; display: block; margin-top: 15px; }
     .radio-group { margin: 10px 0; }
     input[type="file"] { margin-top: 10px; width: 100%; }
     
     .btn-submit { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; font-size: 16px; border-radius: 8px; cursor: pointer; margin-top: 20px; font-weight: bold; }
     .btn-submit:disabled { background-color: #cccccc; cursor: not-allowed; }
-    
     .btn-back { width: 100%; padding: 10px; background-color: #6c757d; color: white; border: none; font-size: 14px; border-radius: 8px; cursor: pointer; margin-top: 10px; }
     
-    #status { margin-top: 15px; font-weight: bold; text-align: center; }
-    
-    /* ซ่อนหน้าจอ */
+    #status, #activityStatusMsg { margin-top: 15px; font-weight: bold; text-align: center; }
     #activityListScreen, #registrationScreen { display: none; }
   </style>
 </head>
@@ -39,17 +36,15 @@
 
     <div id="activityListScreen">
       <h2>เลือกกิจกรรมที่ต้องการ</h2>
-      <div id="activityContainer">
-        </div>
+      <div id="activityContainer"></div>
     </div>
 
     <div id="registrationScreen">
       <h3 id="displayActivityName">ชื่อกิจกรรม</h3>
-      
-      <label>การเข้าร่วมกิจกรรม:</label>
+      <p id="activityStatusMsg"></p> <label>การเข้าร่วมกิจกรรม:</label>
       <div class="radio-group">
         <input type="radio" id="joinYes" name="joinStatus" value="เข้า" onchange="toggleForm()"> 
-        <label for="joinYes" style="display:inline; font-weight:normal;">เข้าร่วม</label> <br><br>
+        <label for="joinYes" id="lblJoinYes" style="display:inline; font-weight:normal;">เข้าร่วม</label> <br><br>
         
         <input type="radio" id="joinNo" name="joinStatus" value="ไม่เข้า" onchange="toggleForm()"> 
         <label for="joinNo" style="display:inline; font-weight:normal;">ไม่เข้าร่วม</label>
@@ -68,10 +63,10 @@
   </div>
 
   <script>
-    // ⚠️ 1. ใส่ LIFF ID ตัวใหม่สำหรับหน้านี้
+    // ⚠️ 1. ใส่ LIFF ID ตัวที่ 2 (กิจกรรม) ของคุณที่นี่เหมือนเดิม
     const MY_LIFF_ID = "2009184465-5keukQAB"; 
-    // ⚠️ 2. ใส่ GAS Web App URL (ใช้ URL เดียวกับระบบแรกได้เลย แต่อย่าลืมว่าต้องเป็นเวอร์ชันล่าสุดที่เพิ่ง Deploy ไปนะครับ)
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzYoDOhDDqQ8Wh4vsv_2HgFGFbCi1A_yPBuqefuR03fbCVZA5Z645AeAfxOFhGIBfuV/exec"; 
+    // ⚠️ 2. ใส่ GAS Web App URL เหมือนเดิม
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzvHM4o5uGr8-GC8c1cXIRNCguT-Hgm6SS_Ys4qADQkmrfIRZfPQawJzpdfUUFf_359/exec"; 
 
     let userLineId = "";
     let selectedActivity = "";
@@ -79,25 +74,18 @@
     async function main() {
       try {
         await liff.init({ liffId: MY_LIFF_ID });
-        
         if (!liff.isLoggedIn()) {
-          document.getElementById('loadingScreen').innerHTML = "<h3>กำลังพาไปหน้า Login...</h3>";
           liff.login();
           return;
         }
-
         const profile = await liff.getProfile();
         userLineId = profile.userId;
-
-        // ดึงรายชื่อกิจกรรมจาก Google Sheets
         fetchActivities();
-
       } catch (err) {
         document.getElementById('loadingScreen').innerHTML = `<h3 style="color:red;">Error: ${err.message}</h3>`;
       }
     }
 
-    // ฟังก์ชันดึงรายชื่อกิจกรรม
     async function fetchActivities() {
       try {
         const response = await fetch(`${GAS_API_URL}?action=getActivities`);
@@ -105,52 +93,73 @@
 
         if (res.status === 'success' && res.data.length > 0) {
           const container = document.getElementById('activityContainer');
-          container.innerHTML = ""; // เคลียร์ของเก่า
+          container.innerHTML = ""; 
 
-          // วนลูปสร้างปุ่มกิจกรรม
           res.data.forEach(activity => {
             const btn = document.createElement('button');
-            btn.className = 'btn-activity';
-            btn.innerText = `📌 ${activity.name}`;
-            btn.onclick = () => openRegistrationForm(activity.name);
+            // ถ้าสถานะมีคำว่า "ปิด" หรือ "ไม่เปิด" ให้ปุ่มเป็นสีเทา
+            const isClosed = activity.status.includes("ปิด") || activity.status.includes("ไม่เปิด");
+            btn.className = isClosed ? 'btn-activity closed' : 'btn-activity';
+            
+            const statusText = isClosed ? "(ปิดรับแล้ว)" : "";
+            btn.innerText = `📌 ${activity.name} ${statusText}`;
+            
+            // ส่ง status ไปเช็คตอนเปิดฟอร์มด้วย
+            btn.onclick = () => openRegistrationForm(activity.name, activity.status);
             container.appendChild(btn);
           });
 
-          // สลับหน้าจอไปโชว์ปุ่ม
           document.getElementById('loadingScreen').style.display = 'none';
           document.getElementById('activityListScreen').style.display = 'block';
-
         } else {
-          document.getElementById('loadingScreen').innerHTML = "<h3>ไม่มีกิจกรรมที่เปิดรับในขณะนี้</h3>";
+          document.getElementById('loadingScreen').innerHTML = "<h3>ไม่มีกิจกรรมในขณะนี้</h3>";
         }
       } catch (error) {
         document.getElementById('loadingScreen').innerHTML = `<h3 style="color:red;">ดึงข้อมูลล้มเหลว: ${error.message}</h3>`;
       }
     }
 
-    // เปิดหน้าฟอร์มของกิจกรรมที่เลือก
-    function openRegistrationForm(activityName) {
+    function openRegistrationForm(activityName, status) {
       selectedActivity = activityName;
       document.getElementById('displayActivityName').innerText = `กิจกรรม: ${activityName}`;
       
-      // รีเซ็ตฟอร์ม
-      document.getElementById('joinYes').checked = false;
-      document.getElementById('joinNo').checked = false;
+      const joinYes = document.getElementById('joinYes');
+      const joinNo = document.getElementById('joinNo');
+      const statusMsg = document.getElementById('activityStatusMsg');
+      const lblJoinYes = document.getElementById('lblJoinYes');
+
+      // เช็คว่ากิจกรรมปิดรับหรือยัง (อิงจากคำว่า "ปิด" หรือ "ไม่เปิด" ใน Google Sheets คอลัมน์ C)
+      if (status.includes("ปิด") || status.includes("ไม่เปิด")) {
+        statusMsg.innerText = "❌ กิจกรรมนี้ปิดรับการลงทะเบียนแล้ว";
+        statusMsg.style.color = "red";
+        
+        joinYes.disabled = true; // ล็อกปุ่มเข้าร่วม
+        lblJoinYes.style.color = "#ccc"; // เปลี่ยนสีตัวอักษรให้ดูเป็นสีเทา
+        
+        joinNo.checked = true; // บังคับติ๊ก "ไม่เข้าร่วม" ไว้ก่อนเลย
+      } else {
+        statusMsg.innerText = "✅ เปิดรับลงทะเบียน";
+        statusMsg.style.color = "green";
+        
+        joinYes.disabled = false; // ปลดล็อก
+        lblJoinYes.style.color = "#000";
+        joinYes.checked = false;
+        joinNo.checked = false;
+      }
+      
       document.getElementById('fileInput').value = "";
-      toggleForm(); // อัปเดตสถานะปุ่ม
+      toggleForm(); 
 
       document.getElementById('activityListScreen').style.display = 'none';
       document.getElementById('registrationScreen').style.display = 'block';
     }
 
-    // ย้อนกลับ
     function goBack() {
       document.getElementById('status').innerText = "";
       document.getElementById('registrationScreen').style.display = 'none';
       document.getElementById('activityListScreen').style.display = 'block';
     }
 
-    // ควบคุมการโชว์ปุ่มและช่องแนบไฟล์ (ถ้าเลือกไม่เข้า จะล็อกปุ่มลงทะเบียน)
     function toggleForm() {
       const isJoin = document.getElementById('joinYes').checked;
       const isNotJoin = document.getElementById('joinNo').checked;
@@ -158,7 +167,6 @@
       const submitBtn = document.getElementById('submitBtn');
 
       if (isNotJoin) {
-        // ตามที่คุณรีเควส: ถ้าเลือกไม่เข้า ไม่ให้กดปุ่มลงทะเบียน และซ่อนช่องแนบไฟล์
         fileSection.style.display = 'none';
         submitBtn.disabled = true;
         submitBtn.innerText = "ลงทะเบียน (เฉพาะผู้เข้าร่วม)";
@@ -168,25 +176,23 @@
         submitBtn.innerText = "ยืนยันการลงทะเบียน";
       } else {
         submitBtn.disabled = true;
+        fileSection.style.display = 'none';
       }
     }
 
-    // ฟังก์ชันอ่านไฟล์ให้เป็น Base64
     function getBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]); // เอาแค่ส่วน data ไม่เอา prefix
+        reader.onload = () => resolve(reader.result.split(',')[1]); 
         reader.onerror = error => reject(error);
       });
     }
 
-    // ฟังก์ชันส่งข้อมูล
     async function submitRegistration() {
       const statusDiv = document.getElementById('status');
       const fileInput = document.getElementById('fileInput');
       
-      // เช็คว่าแนบไฟล์หรือยัง
       if (fileInput.files.length === 0) {
         statusDiv.innerText = "❌ กรุณาแนบไฟล์หลักฐาน";
         statusDiv.style.color = "red";
@@ -194,22 +200,19 @@
       }
 
       const file = fileInput.files[0];
-      const maxFileSize = 5 * 1024 * 1024; // จำกัดขนาดไฟล์ 5MB
-      
-      if (file.size > maxFileSize) {
+      if (file.size > 5 * 1024 * 1024) {
         statusDiv.innerText = "❌ ไฟล์ใหญ่เกินไป (กรุณาใช้ไฟล์ไม่เกิน 5MB)";
         statusDiv.style.color = "red";
         return;
       }
 
-      statusDiv.innerText = "กำลังอัปโหลดไฟล์และบันทึกข้อมูล (อาจใช้เวลาสักครู่)...";
+      statusDiv.innerText = "กำลังอัปโหลดไฟล์และบันทึกข้อมูล...";
       statusDiv.style.color = "blue";
       document.getElementById('submitBtn').disabled = true;
 
       try {
         const base64Data = await getBase64(file);
 
-        // สร้างก้อนข้อมูล JSON สำหรับส่งแบบ POST
         const payload = {
           lineUserId: userLineId,
           activityName: selectedActivity,
@@ -227,10 +230,8 @@
         const res = await response.json();
 
         if (res.status === 'success') {
-          statusDiv.innerText = "✅ ลงทะเบียนกิจกรรมสำเร็จ!";
+          statusDiv.innerText = "✅ ลงทะเบียนกิจกรรมและอัปโหลดไฟล์สำเร็จ!";
           statusDiv.style.color = "green";
-          
-          // ปิด LIFF กลับไปหน้าแชทหลังสำเร็จ 2 วินาที
           setTimeout(() => { liff.closeWindow(); }, 2000);
         } else {
           statusDiv.innerText = "❌ เกิดข้อผิดพลาด: " + res.message;
