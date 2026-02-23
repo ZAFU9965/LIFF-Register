@@ -124,13 +124,13 @@
       }
     }
 
-    function openRegistrationForm(activityName, status) {
+function openRegistrationForm(activityName, status) {
       selectedActivity = activityName;
       document.getElementById('displayActivityName').innerText = `กิจกรรม: ${activityName}`;
       
       const safeStatus = status || "";
       
-      // ⭐️ ไม้ตายที่ 2: โชว์ข้อมูลดิบๆ ออกมาให้เห็นบนจอเลยว่าระบบอ่านค่าได้คำว่าอะไร
+      // โชว์ข้อความ Debug สีเทา
       const debugText = safeStatus === "" ? "[ค่าสถานะว่างเปล่า]" : `[สถานะใน Sheet: ${safeStatus}]`;
       document.getElementById('debugStatus').innerText = debugText;
       
@@ -139,7 +139,10 @@
       const statusMsg = document.getElementById('activityStatusMsg');
       const lblJoinYes = document.getElementById('lblJoinYes');
 
-      if (safeStatus.includes("ปิด") || safeStatus.includes("ไม่เปิด")) {
+      // ⭐️ แก้จุดนี้: ใช้การตรวจสอบคำแบบเป๊ะๆ (ตัดช่องว่างทิ้งด้วย .trim())
+      const checkStatus = safeStatus.trim();
+      
+      if (checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ") {
         statusMsg.innerText = "❌ กิจกรรมนี้ปิดรับการลงทะเบียนแล้ว";
         statusMsg.style.color = "red";
         
@@ -147,6 +150,7 @@
         lblJoinYes.style.color = "#ccc"; 
         joinNo.checked = true; 
       } else {
+        // ถ้าเป็นคำอื่นๆ (เช่น "เปิดรับ", "ว่างเปล่า") ให้ถือว่าลงทะเบียนได้
         statusMsg.innerText = "✅ เปิดรับลงทะเบียน";
         statusMsg.style.color = "green";
         
