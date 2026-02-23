@@ -94,18 +94,20 @@
         if (res.status === 'success' && res.data.length > 0) {
           const container = document.getElementById('activityContainer');
           container.innerHTML = ""; 
-
+          
           res.data.forEach(activity => {
             const btn = document.createElement('button');
-            // ถ้าสถานะมีคำว่า "ปิด" หรือ "ไม่เปิด" ให้ปุ่มเป็นสีเทา
-            const isClosed = activity.status.includes("ปิด") || activity.status.includes("ไม่เปิด");
+            
+            // ⭐️ ดักจับ Error: ถ้าไม่มี status ส่งมา ให้ถือว่าเป็นค่าว่าง "" (เว็บจะได้ไม่พัง)
+            const safeStatus = activity.status || ""; 
+            
+            const isClosed = safeStatus.includes("ปิด") || safeStatus.includes("ไม่เปิด");
             btn.className = isClosed ? 'btn-activity closed' : 'btn-activity';
             
             const statusText = isClosed ? "(ปิดรับแล้ว)" : "";
             btn.innerText = `📌 ${activity.name} ${statusText}`;
             
-            // ส่ง status ไปเช็คตอนเปิดฟอร์มด้วย
-            btn.onclick = () => openRegistrationForm(activity.name, activity.status);
+            btn.onclick = () => openRegistrationForm(activity.name, safeStatus);
             container.appendChild(btn);
           });
 
@@ -128,20 +130,21 @@
       const statusMsg = document.getElementById('activityStatusMsg');
       const lblJoinYes = document.getElementById('lblJoinYes');
 
-      // เช็คว่ากิจกรรมปิดรับหรือยัง (อิงจากคำว่า "ปิด" หรือ "ไม่เปิด" ใน Google Sheets คอลัมน์ C)
-      if (status.includes("ปิด") || status.includes("ไม่เปิด")) {
+      // ⭐️ ดักจับ Error: สร้าง safeStatus กันเหนียว
+      const safeStatus = status || "";
+
+      if (safeStatus.includes("ปิด") || safeStatus.includes("ไม่เปิด")) {
         statusMsg.innerText = "❌ กิจกรรมนี้ปิดรับการลงทะเบียนแล้ว";
         statusMsg.style.color = "red";
         
-        joinYes.disabled = true; // ล็อกปุ่มเข้าร่วม
-        lblJoinYes.style.color = "#ccc"; // เปลี่ยนสีตัวอักษรให้ดูเป็นสีเทา
-        
-        joinNo.checked = true; // บังคับติ๊ก "ไม่เข้าร่วม" ไว้ก่อนเลย
+        joinYes.disabled = true; 
+        lblJoinYes.style.color = "#ccc"; 
+        joinNo.checked = true; 
       } else {
         statusMsg.innerText = "✅ เปิดรับลงทะเบียน";
         statusMsg.style.color = "green";
         
-        joinYes.disabled = false; // ปลดล็อก
+        joinYes.disabled = false; 
         lblJoinYes.style.color = "#000";
         joinYes.checked = false;
         joinNo.checked = false;
