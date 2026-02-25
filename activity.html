@@ -14,7 +14,6 @@
     .btn-activity:hover { background-color: #0056b3; }
     .btn-activity.closed { background-color: #999; }
     
-    /* กล่องรายละเอียดกิจกรรม */
     .activity-details { background-color: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; color: #333; }
     .activity-details p { margin: 5px 0; }
     
@@ -28,7 +27,6 @@
     
     #status, #activityStatusMsg { margin-top: 10px; font-weight: bold; text-align: center; }
     #activityListScreen, #registrationScreen { display: none; }
-    .debug-text { font-size: 12px; color: #888; text-align: center; margin-top: 0; display: none; /* ซ่อน debug แล้ว */ } 
   </style>
 </head>
 <body>
@@ -45,7 +43,6 @@
 
     <div id="registrationScreen">
       <h3 id="displayActivityName">ชื่อกิจกรรม</h3>
-      <p id="debugStatus" class="debug-text"></p>
       
       <div class="activity-details">
         <p><strong>📅 วันที่:</strong> <span id="dispDate"></span></p>
@@ -56,21 +53,24 @@
 
       <p id="activityStatusMsg"></p> 
       
-      <label>การเข้าร่วมกิจกรรม:</label>
-      <div class="radio-group">
-        <input type="radio" id="joinYes" name="joinStatus" value="เข้า" onchange="toggleForm()"> 
-        <label for="joinYes" id="lblJoinYes" style="display:inline; font-weight:normal;">เข้าร่วม</label> <br><br>
-        
-        <input type="radio" id="joinNo" name="joinStatus" value="ไม่เข้า" onchange="toggleForm()"> 
-        <label for="joinNo" style="display:inline; font-weight:normal;">ไม่เข้าร่วม</label>
+      <div id="interactionArea">
+        <label>การเข้าร่วมกิจกรรม:</label>
+        <div class="radio-group">
+          <input type="radio" id="joinYes" name="joinStatus" value="เข้า" onchange="toggleForm()"> 
+          <label for="joinYes" id="lblJoinYes" style="display:inline; font-weight:normal;">เข้าร่วม</label> <br><br>
+          
+          <input type="radio" id="joinNo" name="joinStatus" value="ไม่เข้า" onchange="toggleForm()"> 
+          <label for="joinNo" style="display:inline; font-weight:normal;">ไม่เข้าร่วม</label>
+        </div>
+
+        <div id="fileUploadSection" style="display:none;">
+          <label>แนบไฟล์หลักฐาน/เหตุผลที่ไม่เข้าร่วม (PDF, JPG, PNG):</label>
+          <input type="file" id="fileInput" accept=".pdf, .jpg, .jpeg, .png">
+        </div>
+
+        <button id="submitBtn" class="btn-submit" onclick="submitRegistration()" disabled>ลงทะเบียน</button>
       </div>
 
-      <div id="fileUploadSection">
-        <label>แนบไฟล์หลักฐาน/เหตุผลที่ไม่เข้าร่วม (PDF, JPG, PNG):</label>
-        <input type="file" id="fileInput" accept=".pdf, .jpg, .jpeg, .png">
-      </div>
-
-      <button id="submitBtn" class="btn-submit" onclick="submitRegistration()" disabled>ลงทะเบียน</button>
       <button class="btn-back" onclick="goBack()">ย้อนกลับไปเลือกกิจกรรม</button>
 
       <div id="status"></div>
@@ -118,11 +118,9 @@
             const isClosed = checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ";
             
             btn.className = isClosed ? 'btn-activity closed' : 'btn-activity';
-            
             const statusText = isClosed ? "(ปิดรับแล้ว)" : "";
             btn.innerText = `📌 ${activity.name} ${statusText}`;
             
-            // ส่ง object activity ไปทั้งก้อนเลย
             btn.onclick = () => openRegistrationForm(activity);
             container.appendChild(btn);
           });
@@ -141,12 +139,10 @@
       selectedActivity = activity.name;
       document.getElementById('displayActivityName').innerText = `กิจกรรม: ${activity.name}`;
       
-      // นำข้อมูลมาใส่ในกล่องรายละเอียด
       document.getElementById('dispDate').innerText = activity.date;
       document.getElementById('dispTime').innerText = activity.time;
       document.getElementById('dispLoc').innerText = activity.location;
       
-      // เช็คว่ามีรายละเอียดไหม ถ้าไม่มีให้ซ่อนบรรทัดนี้ไปเลย
       if (activity.desc && activity.desc.trim() !== "") {
         document.getElementById('dispDesc').innerText = activity.desc;
         document.getElementById('dispDescContainer').style.display = 'block';
@@ -155,12 +151,8 @@
       }
 
       const safeStatus = activity.status || "";
-      document.getElementById('debugStatus').innerText = safeStatus === "" ? "[ค่าสถานะว่างเปล่า]" : `[สถานะใน Sheet: ${safeStatus}]`;
-      
-      const joinYes = document.getElementById('joinYes');
-      const joinNo = document.getElementById('joinNo');
       const statusMsg = document.getElementById('activityStatusMsg');
-      const lblJoinYes = document.getElementById('lblJoinYes');
+      const interactionArea = document.getElementById('interactionArea'); // กล่องทำรายการ
 
       const checkStatus = safeStatus.trim();
       
@@ -168,17 +160,16 @@
         statusMsg.innerText = "❌ กิจกรรมนี้ปิดรับการลงทะเบียนเข้าร่วมแล้ว";
         statusMsg.style.color = "red";
         
-        joinYes.disabled = true; 
-        lblJoinYes.style.color = "#ccc"; 
-        joinNo.checked = true; // บังคับเลื่อนไปที่ "ไม่เข้า"
+        // 🌟 ซ่อนปุ่มกดทั้งหมดไปเลย
+        interactionArea.style.display = "none";
       } else {
         statusMsg.innerText = "✅ เปิดรับลงทะเบียน";
         statusMsg.style.color = "green";
         
-        joinYes.disabled = false; 
-        lblJoinYes.style.color = "#000";
-        joinYes.checked = false;
-        joinNo.checked = false;
+        // 🌟 โชว์ปุ่มให้ลงทะเบียนได้ปกติ
+        interactionArea.style.display = "block";
+        document.getElementById('joinYes').checked = false;
+        document.getElementById('joinNo').checked = false;
       }
       
       document.getElementById('fileInput').value = "";
@@ -201,12 +192,10 @@
       const submitBtn = document.getElementById('submitBtn');
 
       if (isNotJoin) {
-        // ถ้าเลือก "ไม่เข้า" -> โชว์ช่องแนบไฟล์, กดปุ่มได้
         fileSection.style.display = 'block';
         submitBtn.disabled = false;
         submitBtn.innerText = "ยืนยันการไม่เข้าร่วม (แนบเหตุผล)";
       } else if (isJoin) {
-        // ถ้าเลือก "เข้า" -> ซ่อนช่องแนบไฟล์, กดปุ่มได้
         fileSection.style.display = 'none';
         submitBtn.disabled = false;
         submitBtn.innerText = "ยืนยันการเข้าร่วม";
@@ -231,33 +220,28 @@
       const fileInput = document.getElementById('fileInput');
       const isNotJoin = document.getElementById('joinNo').checked;
       
-      // ตัวแปรเตรียมไว้เก็บข้อมูลไฟล์ (ถ้ามี)
       let base64Data = "";
       let fileName = "";
       let mimeType = "";
       let joinStatusText = isNotJoin ? "ไม่เข้า" : "เข้า";
       
-      // เช็คไฟล์เฉพาะคนที่ไม่เข้าร่วม
       if (isNotJoin) {
         if (fileInput.files.length === 0) {
           statusDiv.innerText = "❌ กรุณาแนบไฟล์หลักฐาน/เหตุผลที่ไม่เข้าร่วม";
           statusDiv.style.color = "red";
           return;
         }
-
         const file = fileInput.files[0];
         if (file.size > 5 * 1024 * 1024) {
           statusDiv.innerText = "❌ ไฟล์ใหญ่เกินไป (กรุณาใช้ไฟล์ไม่เกิน 5MB)";
           statusDiv.style.color = "red";
           return;
         }
-
         statusDiv.innerText = "กำลังอัปโหลดไฟล์เหตุผลและบันทึกข้อมูล...";
         base64Data = await getBase64(file);
         fileName = file.name;
         mimeType = file.type;
       } else {
-        // สำหรับคนที่เข้าร่วม
         statusDiv.innerText = "กำลังบันทึกข้อมูลการเข้าร่วม...";
       }
 
