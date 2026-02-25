@@ -8,11 +8,15 @@
   <style>
     body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
     .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-    h2, h3 { text-align: center; color: #333; }
+    h2, h3 { text-align: center; color: #333; margin-bottom: 10px; }
     
     .btn-activity { display: block; width: 100%; padding: 15px; margin: 10px 0; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; text-align: left; }
     .btn-activity:hover { background-color: #0056b3; }
     .btn-activity.closed { background-color: #999; }
+    
+    /* กล่องรายละเอียดกิจกรรม */
+    .activity-details { background-color: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; color: #333; }
+    .activity-details p { margin: 5px 0; }
     
     label { font-weight: bold; display: block; margin-top: 15px; }
     .radio-group { margin: 10px 0; }
@@ -22,9 +26,9 @@
     .btn-submit:disabled { background-color: #cccccc; cursor: not-allowed; }
     .btn-back { width: 100%; padding: 10px; background-color: #6c757d; color: white; border: none; font-size: 14px; border-radius: 8px; cursor: pointer; margin-top: 10px; }
     
-    #status, #activityStatusMsg { margin-top: 15px; font-weight: bold; text-align: center; }
+    #status, #activityStatusMsg { margin-top: 10px; font-weight: bold; text-align: center; }
     #activityListScreen, #registrationScreen { display: none; }
-    .debug-text { font-size: 12px; color: #888; text-align: center; margin-top: 0; }
+    .debug-text { font-size: 12px; color: #888; text-align: center; margin-top: 0; display: none; /* ซ่อน debug แล้ว */ } 
   </style>
 </head>
 <body>
@@ -41,7 +45,16 @@
 
     <div id="registrationScreen">
       <h3 id="displayActivityName">ชื่อกิจกรรม</h3>
-      <p id="debugStatus" class="debug-text"></p> <p id="activityStatusMsg"></p> 
+      <p id="debugStatus" class="debug-text"></p>
+      
+      <div class="activity-details">
+        <p><strong>📅 วันที่:</strong> <span id="dispDate"></span></p>
+        <p><strong>⏰ เวลา:</strong> <span id="dispTime"></span></p>
+        <p><strong>📍 สถานที่:</strong> <span id="dispLoc"></span></p>
+        <p id="dispDescContainer"><strong>📝 รายละเอียด:</strong> <span id="dispDesc"></span></p>
+      </div>
+
+      <p id="activityStatusMsg"></p> 
       
       <label>การเข้าร่วมกิจกรรม:</label>
       <div class="radio-group">
@@ -53,7 +66,7 @@
       </div>
 
       <div id="fileUploadSection">
-        <label>แนบไฟล์หลักฐาน (PDF, JPG, PNG):</label>
+        <label>แนบไฟล์หลักฐาน/เหตุผลที่ไม่เข้าร่วม (PDF, JPG, PNG):</label>
         <input type="file" id="fileInput" accept=".pdf, .jpg, .jpeg, .png">
       </div>
 
@@ -65,10 +78,9 @@
   </div>
 
   <script>
-    // ⚠️ 1. ใส่ LIFF ID กิจกรรมของคุณ
-    const MY_LIFF_ID = "2009184465-5keukQAB"; 
-    // ⚠️ 2. ใส่ GAS Web App URL ของคุณ
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzYoDOhDDqQ8Wh4vsv_2HgFGFbCi1A_yPBuqefuR03fbCVZA5Z645AeAfxOFhGIBfuV/exec"; 
+    // ⚠️ อย่าลืมใส่ LIFF ID และ Web App URL ของคุณ!
+    const MY_LIFF_ID = "ใส่_LIFF_ID_กิจกรรมที่นี่"; 
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzvHM4o5uGr8-GC8c1cXIRNCguT-Hgm6SS_Ys4qADQkmrfIRZfPQawJzpdfUUFf_359/exec"; 
 
     let userLineId = "";
     let selectedActivity = "";
@@ -90,7 +102,6 @@
 
     async function fetchActivities() {
       try {
-        // ⭐️ ไม้ตายที่ 1: เติมพารามิเตอร์เวลาต่อท้าย URL เพื่อบังคับให้โหลดข้อมูลใหม่เสมอ (ไม่ใช้แคช)
         const checkUrl = `${GAS_API_URL}?action=getActivities&t=${new Date().getTime()}`;
         const response = await fetch(checkUrl);
         const res = await response.json();
@@ -103,14 +114,16 @@
             const btn = document.createElement('button');
             const safeStatus = activity.status || ""; 
             
-            // กำหนดไปเลยว่า ถ้าพิมพ์คำว่า "ปิดรับ" หรือ "ปิด" เป๊ะๆ ถึงจะล็อกปุ่ม
-            const isClosed = safeStatus.trim() === "ปิดรับ" || safeStatus.trim() === "ปิด" || safeStatus.trim() === "ไม่เปิดรับ";
+            const checkStatus = safeStatus.trim();
+            const isClosed = checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ";
+            
             btn.className = isClosed ? 'btn-activity closed' : 'btn-activity';
             
             const statusText = isClosed ? "(ปิดรับแล้ว)" : "";
             btn.innerText = `📌 ${activity.name} ${statusText}`;
             
-            btn.onclick = () => openRegistrationForm(activity.name, safeStatus);
+            // ส่ง object activity ไปทั้งก้อนเลย
+            btn.onclick = () => openRegistrationForm(activity);
             container.appendChild(btn);
           });
 
@@ -124,33 +137,41 @@
       }
     }
 
-function openRegistrationForm(activityName, status) {
-      selectedActivity = activityName;
-      document.getElementById('displayActivityName').innerText = `กิจกรรม: ${activityName}`;
+    function openRegistrationForm(activity) {
+      selectedActivity = activity.name;
+      document.getElementById('displayActivityName').innerText = `กิจกรรม: ${activity.name}`;
       
-      const safeStatus = status || "";
+      // นำข้อมูลมาใส่ในกล่องรายละเอียด
+      document.getElementById('dispDate').innerText = activity.date;
+      document.getElementById('dispTime').innerText = activity.time;
+      document.getElementById('dispLoc').innerText = activity.location;
       
-      // โชว์ข้อความ Debug สีเทา
-      const debugText = safeStatus === "" ? "[ค่าสถานะว่างเปล่า]" : `[สถานะใน Sheet: ${safeStatus}]`;
-      document.getElementById('debugStatus').innerText = debugText;
+      // เช็คว่ามีรายละเอียดไหม ถ้าไม่มีให้ซ่อนบรรทัดนี้ไปเลย
+      if (activity.desc && activity.desc.trim() !== "") {
+        document.getElementById('dispDesc').innerText = activity.desc;
+        document.getElementById('dispDescContainer').style.display = 'block';
+      } else {
+        document.getElementById('dispDescContainer').style.display = 'none';
+      }
+
+      const safeStatus = activity.status || "";
+      document.getElementById('debugStatus').innerText = safeStatus === "" ? "[ค่าสถานะว่างเปล่า]" : `[สถานะใน Sheet: ${safeStatus}]`;
       
       const joinYes = document.getElementById('joinYes');
       const joinNo = document.getElementById('joinNo');
       const statusMsg = document.getElementById('activityStatusMsg');
       const lblJoinYes = document.getElementById('lblJoinYes');
 
-      // ⭐️ แก้จุดนี้: ใช้การตรวจสอบคำแบบเป๊ะๆ (ตัดช่องว่างทิ้งด้วย .trim())
       const checkStatus = safeStatus.trim();
       
       if (checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ") {
-        statusMsg.innerText = "❌ กิจกรรมนี้ปิดรับการลงทะเบียนแล้ว";
+        statusMsg.innerText = "❌ กิจกรรมนี้ปิดรับการลงทะเบียนเข้าร่วมแล้ว";
         statusMsg.style.color = "red";
         
         joinYes.disabled = true; 
         lblJoinYes.style.color = "#ccc"; 
-        joinNo.checked = true; 
+        joinNo.checked = true; // บังคับเลื่อนไปที่ "ไม่เข้า"
       } else {
-        // ถ้าเป็นคำอื่นๆ (เช่น "เปิดรับ", "ว่างเปล่า") ให้ถือว่าลงทะเบียนได้
         statusMsg.innerText = "✅ เปิดรับลงทะเบียน";
         statusMsg.style.color = "green";
         
@@ -180,16 +201,19 @@ function openRegistrationForm(activityName, status) {
       const submitBtn = document.getElementById('submitBtn');
 
       if (isNotJoin) {
-        fileSection.style.display = 'none';
-        submitBtn.disabled = true;
-        submitBtn.innerText = "ลงทะเบียน (เฉพาะผู้เข้าร่วม)";
-      } else if (isJoin) {
+        // ถ้าเลือก "ไม่เข้า" -> โชว์ช่องแนบไฟล์, กดปุ่มได้
         fileSection.style.display = 'block';
         submitBtn.disabled = false;
-        submitBtn.innerText = "ยืนยันการลงทะเบียน";
+        submitBtn.innerText = "ยืนยันการไม่เข้าร่วม (แนบเหตุผล)";
+      } else if (isJoin) {
+        // ถ้าเลือก "เข้า" -> ซ่อนช่องแนบไฟล์, กดปุ่มได้
+        fileSection.style.display = 'none';
+        submitBtn.disabled = false;
+        submitBtn.innerText = "ยืนยันการเข้าร่วม";
       } else {
         submitBtn.disabled = true;
         fileSection.style.display = 'none';
+        submitBtn.innerText = "ลงทะเบียน";
       }
     }
 
@@ -205,33 +229,48 @@ function openRegistrationForm(activityName, status) {
     async function submitRegistration() {
       const statusDiv = document.getElementById('status');
       const fileInput = document.getElementById('fileInput');
+      const isNotJoin = document.getElementById('joinNo').checked;
       
-      if (fileInput.files.length === 0) {
-        statusDiv.innerText = "❌ กรุณาแนบไฟล์หลักฐาน";
-        statusDiv.style.color = "red";
-        return;
+      // ตัวแปรเตรียมไว้เก็บข้อมูลไฟล์ (ถ้ามี)
+      let base64Data = "";
+      let fileName = "";
+      let mimeType = "";
+      let joinStatusText = isNotJoin ? "ไม่เข้า" : "เข้า";
+      
+      // เช็คไฟล์เฉพาะคนที่ไม่เข้าร่วม
+      if (isNotJoin) {
+        if (fileInput.files.length === 0) {
+          statusDiv.innerText = "❌ กรุณาแนบไฟล์หลักฐาน/เหตุผลที่ไม่เข้าร่วม";
+          statusDiv.style.color = "red";
+          return;
+        }
+
+        const file = fileInput.files[0];
+        if (file.size > 5 * 1024 * 1024) {
+          statusDiv.innerText = "❌ ไฟล์ใหญ่เกินไป (กรุณาใช้ไฟล์ไม่เกิน 5MB)";
+          statusDiv.style.color = "red";
+          return;
+        }
+
+        statusDiv.innerText = "กำลังอัปโหลดไฟล์เหตุผลและบันทึกข้อมูล...";
+        base64Data = await getBase64(file);
+        fileName = file.name;
+        mimeType = file.type;
+      } else {
+        // สำหรับคนที่เข้าร่วม
+        statusDiv.innerText = "กำลังบันทึกข้อมูลการเข้าร่วม...";
       }
 
-      const file = fileInput.files[0];
-      if (file.size > 5 * 1024 * 1024) {
-        statusDiv.innerText = "❌ ไฟล์ใหญ่เกินไป (กรุณาใช้ไฟล์ไม่เกิน 5MB)";
-        statusDiv.style.color = "red";
-        return;
-      }
-
-      statusDiv.innerText = "กำลังอัปโหลดไฟล์และบันทึกข้อมูล...";
       statusDiv.style.color = "blue";
       document.getElementById('submitBtn').disabled = true;
 
       try {
-        const base64Data = await getBase64(file);
-
         const payload = {
           lineUserId: userLineId,
           activityName: selectedActivity,
-          joinStatus: "เข้า",
-          fileName: file.name,
-          mimeType: file.type,
+          joinStatus: joinStatusText,
+          fileName: fileName,
+          mimeType: mimeType,
           fileBase64: base64Data
         };
 
@@ -243,7 +282,7 @@ function openRegistrationForm(activityName, status) {
         const res = await response.json();
 
         if (res.status === 'success') {
-          statusDiv.innerText = "✅ ลงทะเบียนกิจกรรมและอัปโหลดไฟล์สำเร็จ!";
+          statusDiv.innerText = "✅ บันทึกข้อมูลสำเร็จ!";
           statusDiv.style.color = "green";
           setTimeout(() => { liff.closeWindow(); }, 2000);
         } else {
