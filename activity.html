@@ -12,7 +12,10 @@
     
     .btn-activity { display: block; width: 100%; padding: 15px; margin: 10px 0; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; text-align: left; }
     .btn-activity:hover { background-color: #0056b3; }
-    .btn-activity.closed { background-color: #999; }
+    
+    /* สีของปุ่มแต่ละสถานะ */
+    .btn-activity.closed { background-color: #999; } /* ปิดรับแล้ว สีเทา */
+    .btn-activity.registered { background-color: #17a2b8; border-left: 5px solid #0b2e13; } /* ลงแล้ว สีฟ้าน้ำทะเล */
     
     .activity-details { background-color: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; color: #333; }
     .activity-details p { margin: 5px 0; }
@@ -102,26 +105,40 @@
 
     async function fetchActivities() {
       try {
-        const checkUrl = `${GAS_API_URL}?action=getActivities&t=${new Date().getTime()}`;
+        // 🌟 เพิ่ม userId ต่อท้ายลิงก์ เพื่อให้หลังบ้านเช็คว่าคนนี้เคยลงอะไรไปบ้าง
+        const checkUrl = `${GAS_API_URL}?action=getActivities&userId=${userLineId}&t=${new Date().getTime()}`;
         const response = await fetch(checkUrl);
         const res = await response.json();
 
         if (res.status === 'success' && res.data.length > 0) {
           const container = document.getElementById('activityContainer');
           container.innerHTML = ""; 
+          
+          // รับรายชื่อกิจกรรมที่เคยลงแล้ว (ถ้าไม่มีจะเป็น Array ว่าง)
+          const registeredActivities = res.registered || [];
 
           res.data.forEach(activity => {
             const btn = document.createElement('button');
             const safeStatus = activity.status || ""; 
-            
             const checkStatus = safeStatus.trim();
             const isClosed = checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ";
             
-            btn.className = isClosed ? 'btn-activity closed' : 'btn-activity';
-            const statusText = isClosed ? "(ปิดรับแล้ว)" : "";
-            btn.innerText = `📌 ${activity.name} ${statusText}`;
+            // 🌟 เช็คว่าชื่อกิจกรรมนี้ อยู่ใน List ที่เคยลงแล้วหรือเปล่า?
+            const isRegistered = registeredActivities.includes(activity.name);
             
-            btn.onclick = () => openRegistrationForm(activity);
+            if (isRegistered) {
+              btn.className = 'btn-activity registered';
+              btn.innerText = `✅ ${activity.name} (คุณลงทะเบียนแล้ว)`;
+            } else if (isClosed) {
+              btn.className = 'btn-activity closed';
+              btn.innerText = `📌 ${activity.name} (ปิดรับแล้ว)`;
+            } else {
+              btn.className = 'btn-activity';
+              btn.innerText = `📌 ${activity.name}`;
+            }
+            
+            // ส่ง object activity และสถานะการลงทะเบียนไปที่หน้าฟอร์ม
+            btn.onclick = () => openRegistrationForm(activity, isRegistered);
             container.appendChild(btn);
           });
 
@@ -135,7 +152,7 @@
       }
     }
 
-    function openRegistrationForm(activity) {
+    function openRegistrationForm(activity, isRegistered) {
       selectedActivity = activity.name;
       document.getElementById('displayActivityName').innerText = `กิจกรรม: ${activity.name}`;
       
@@ -152,21 +169,26 @@
 
       const safeStatus = activity.status || "";
       const statusMsg = document.getElementById('activityStatusMsg');
-      const interactionArea = document.getElementById('interactionArea'); // กล่องทำรายการ
+      const interactionArea = document.getElementById('interactionArea'); 
 
       const checkStatus = safeStatus.trim();
       
-      if (checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ") {
+      // 🌟 เงื่อนไขที่ 1: ตรวจสอบว่าเคยลงทะเบียนหรือยัง (สำคัญสุด)
+      if (isRegistered) {
+        statusMsg.innerText = "✅ คุณได้บันทึกการเข้าร่วมกิจกรรมนี้ไปแล้ว";
+        statusMsg.style.color = "#17a2b8"; // โชว์ข้อความสีฟ้าน้ำทะเล
+        interactionArea.style.display = "none"; // ซ่อนปุ่มทำรายการทั้งหมด
+        
+      // 🌟 เงื่อนไขที่ 2: ถ้าไม่ได้ลง แต่กิจกรรมปิดรับแล้ว
+      } else if (checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ") {
         statusMsg.innerText = "❌ กิจกรรมนี้ปิดรับการลงทะเบียนเข้าร่วมแล้ว";
         statusMsg.style.color = "red";
-        
-        // 🌟 ซ่อนปุ่มกดทั้งหมดไปเลย
         interactionArea.style.display = "none";
+        
+      // 🌟 เงื่อนไขที่ 3: เปิดรับปกติ
       } else {
         statusMsg.innerText = "✅ เปิดรับลงทะเบียน";
         statusMsg.style.color = "green";
-        
-        // 🌟 โชว์ปุ่มให้ลงทะเบียนได้ปกติ
         interactionArea.style.display = "block";
         document.getElementById('joinYes').checked = false;
         document.getElementById('joinNo').checked = false;
@@ -268,6 +290,8 @@
         if (res.status === 'success') {
           statusDiv.innerText = "✅ บันทึกข้อมูลสำเร็จ!";
           statusDiv.style.color = "green";
+          
+          // ปิดหน้าต่างแล้วให้โหลดใหม่ถ้าผู้ใช้เปิดอีกครั้ง
           setTimeout(() => { liff.closeWindow(); }, 2000);
         } else {
           statusDiv.innerText = "❌ เกิดข้อผิดพลาด: " + res.message;
