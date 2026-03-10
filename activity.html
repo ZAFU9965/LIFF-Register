@@ -12,10 +12,8 @@
     
     .btn-activity { display: block; width: 100%; padding: 15px; margin: 10px 0; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; text-align: left; }
     .btn-activity:hover { background-color: #0056b3; }
-    
-    /* สีของปุ่มแต่ละสถานะ */
-    .btn-activity.closed { background-color: #999; } /* ปิดรับแล้ว สีเทา */
-    .btn-activity.registered { background-color: #17a2b8; border-left: 5px solid #0b2e13; } /* ลงแล้ว สีฟ้าน้ำทะเล */
+    .btn-activity.closed { background-color: #999; } 
+    .btn-activity.registered { background-color: #17a2b8; border-left: 5px solid #0b2e13; } 
     
     .activity-details { background-color: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; color: #333; }
     .activity-details p { margin: 5px 0; }
@@ -74,7 +72,7 @@
         <button id="submitBtn" class="btn-submit" onclick="submitRegistration()" disabled>ลงทะเบียน</button>
       </div>
 
-      <button class="btn-back" onclick="goBack()">ย้อนกลับไปเลือกกิจกรรม</button>
+      <button id="btnBackToList" class="btn-back" onclick="goBack()">ย้อนกลับไปเลือกกิจกรรม</button>
 
       <div id="status"></div>
     </div>
@@ -82,8 +80,8 @@
 
   <script>
     // ⚠️ อย่าลืมใส่ LIFF ID และ Web App URL ของคุณ!
-    const MY_LIFF_ID = "2009184465-5keukQAB"; 
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyWzSRXTQViGmlPGbL7zwhwrf_p-8u8bzw9po8AfE1Wco7wOCn1aVTwvYzFJVCdHl8T/exec"; 
+    const MY_LIFF_ID = "ใส่_LIFF_ID_กิจกรรมที่นี่"; 
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzvHM4o5uGr8-GC8c1cXIRNCguT-Hgm6SS_Ys4qADQkmrfIRZfPQawJzpdfUUFf_359/exec"; 
 
     let userLineId = "";
     let selectedActivity = "";
@@ -105,7 +103,6 @@
 
     async function fetchActivities() {
       try {
-        // 🌟 เพิ่ม userId ต่อท้ายลิงก์ เพื่อให้หลังบ้านเช็คว่าคนนี้เคยลงอะไรไปบ้าง
         const checkUrl = `${GAS_API_URL}?action=getActivities&userId=${userLineId}&t=${new Date().getTime()}`;
         const response = await fetch(checkUrl);
         const res = await response.json();
@@ -113,17 +110,19 @@
         if (res.status === 'success' && res.data.length > 0) {
           const container = document.getElementById('activityContainer');
           container.innerHTML = ""; 
-          
-          // รับรายชื่อกิจกรรมที่เคยลงแล้ว (ถ้าไม่มีจะเป็น Array ว่าง)
           const registeredActivities = res.registered || [];
 
+          // 🌟 เช็คว่ามาจาก QR Code กิจกรรมเฉพาะหรือไม่ (เช็คคำว่า ?event=...)
+          const urlParams = new URLSearchParams(window.location.search);
+          const eventParam = urlParams.get('event');
+
+          // สร้างปุ่มหน้าแรกรอไว้ก่อน
           res.data.forEach(activity => {
             const btn = document.createElement('button');
             const safeStatus = activity.status || ""; 
             const checkStatus = safeStatus.trim();
             const isClosed = checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ";
             
-            // 🌟 เช็คว่าชื่อกิจกรรมนี้ อยู่ใน List ที่เคยลงแล้วหรือเปล่า?
             const isRegistered = registeredActivities.includes(activity.name);
             
             if (isRegistered) {
@@ -137,11 +136,28 @@
               btn.innerText = `📌 ${activity.name}`;
             }
             
-            // ส่ง object activity และสถานะการลงทะเบียนไปที่หน้าฟอร์ม
             btn.onclick = () => openRegistrationForm(activity, isRegistered);
             container.appendChild(btn);
           });
 
+          // 🌟 ถ้ามี eventParam ส่งมา ให้เด้งข้ามไปหน้าฟอร์มของกิจกรรมนั้นเลย
+          if (eventParam) {
+            // ค้นหากิจกรรมที่มีคำว่า event=... อยู่ในลิงก์คอลัมน์ H
+            const targetActivity = res.data.find(act => act.link.includes(`event=${eventParam}`));
+            if (targetActivity) {
+              const isRegistered = registeredActivities.includes(targetActivity.name);
+              openRegistrationForm(targetActivity, isRegistered);
+              
+              // ซ่อนปุ่มย้อนกลับ เพื่อไม่ให้คนสแกนหน้างานกดย้อนไปดูกิจกรรมอื่นได้
+              document.getElementById('btnBackToList').style.display = 'none';
+              
+              document.getElementById('loadingScreen').style.display = 'none';
+              return; // หยุดการทำงานตรงนี้เลย
+            }
+          }
+
+          // ถ้าไม่ได้สแกน QR Code (เข้าจากริชเมนูปกติ) ให้โชว์หน้า List ปกติ
+          document.getElementById('btnBackToList').style.display = 'block'; // มั่นใจว่าเปิดปุ่มย้อนกลับ
           document.getElementById('loadingScreen').style.display = 'none';
           document.getElementById('activityListScreen').style.display = 'block';
         } else {
@@ -173,19 +189,14 @@
 
       const checkStatus = safeStatus.trim();
       
-      // 🌟 เงื่อนไขที่ 1: ตรวจสอบว่าเคยลงทะเบียนหรือยัง (สำคัญสุด)
       if (isRegistered) {
         statusMsg.innerText = "✅ คุณได้บันทึกการเข้าร่วมกิจกรรมนี้ไปแล้ว";
-        statusMsg.style.color = "#17a2b8"; // โชว์ข้อความสีฟ้าน้ำทะเล
-        interactionArea.style.display = "none"; // ซ่อนปุ่มทำรายการทั้งหมด
-        
-      // 🌟 เงื่อนไขที่ 2: ถ้าไม่ได้ลง แต่กิจกรรมปิดรับแล้ว
+        statusMsg.style.color = "#17a2b8"; 
+        interactionArea.style.display = "none"; 
       } else if (checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ") {
         statusMsg.innerText = "❌ กิจกรรมนี้ปิดรับการลงทะเบียนเข้าร่วมแล้ว";
         statusMsg.style.color = "red";
         interactionArea.style.display = "none";
-        
-      // 🌟 เงื่อนไขที่ 3: เปิดรับปกติ
       } else {
         statusMsg.innerText = "✅ เปิดรับลงทะเบียน";
         statusMsg.style.color = "green";
@@ -291,7 +302,6 @@
           statusDiv.innerText = "✅ บันทึกข้อมูลสำเร็จ!";
           statusDiv.style.color = "green";
           
-          // ปิดหน้าต่างแล้วให้โหลดใหม่ถ้าผู้ใช้เปิดอีกครั้ง
           setTimeout(() => { liff.closeWindow(); }, 2000);
         } else {
           statusDiv.innerText = "❌ เกิดข้อผิดพลาด: " + res.message;
