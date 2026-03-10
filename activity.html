@@ -109,17 +109,15 @@
 
         if (res.status === 'success') {
           
-          // 🌟 ดักจับคนนอก! ถ้าในชีต 08_DB ไม่มีชื่อคนๆ นี้ ให้บล็อกทันที
+          // 🌟 ดักจับคนนอก! ถ้าในชีต 08_DB ไม่มีชื่อคนๆ นี้ ให้เด้งไปหน้าลงทะเบียนประวัติ (LIFF ตัวแรก) ทันที
           if (res.isUserRegistered === false) {
-            document.getElementById('loadingScreen').innerHTML = `
-              <h3 style="color: red;">❌ ไม่พบข้อมูลในระบบ</h3>
-              <p style="text-align: center; color: #333;">คุณยังไม่ได้ลงทะเบียนประวัติส่วนตัว<br>กรุณาลงทะเบียนผ่านเมนูหลักก่อนเข้าร่วมกิจกรรมครับ</p>
-              <br>
-              <button class="btn-back" onclick="liff.closeWindow()" style="background-color: #333; color: white;">ปิดหน้าต่างนี้</button>
-            `;
-            return; // 🛑 หยุดการทำงานทั้งหมดตรงนี้เลย
+            document.getElementById('loadingScreen').innerHTML = `<h3 style="color: blue;">กำลังพาคุณไปหน้าลงทะเบียนประวัติ...</h3>`;
+            
+            // ⚠️ เปลี่ยนลิงก์ด้านล่างนี้ เป็นลิงก์ LIFF ตัวแรกสุดของคุณ (ตัวที่ให้กรอกรหัสบัตรประชาชน)
+            window.location.href = "https://liff.line.me/2009162197-2HJEdiFz";
+            return; // 🛑 หยุดการทำงานของหน้ากิจกรรม
           }
-
+          
           // ถ้าระบบเจอชื่อ ก็ให้แสดงกิจกรรมตามปกติ
           if (res.data.length > 0) {
             const container = document.getElementById('activityContainer');
