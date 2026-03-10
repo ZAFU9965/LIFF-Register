@@ -79,7 +79,7 @@
   </div>
 
   <script>
-    // ⚠️ อย่าลืมใส่ LIFF ID และ Web App URL ของคุณ!
+    // ⚠️ ใส่ LIFF ID (กิจกรรม) และ GAS Web App URL เหมือนเดิมครับ
     const MY_LIFF_ID = "2009184465-5keukQAB"; 
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyWzSRXTQViGmlPGbL7zwhwrf_p-8u8bzw9po8AfE1Wco7wOCn1aVTwvYzFJVCdHl8T/exec"; 
 
@@ -107,61 +107,70 @@
         const response = await fetch(checkUrl);
         const res = await response.json();
 
-        if (res.status === 'success' && res.data.length > 0) {
-          const container = document.getElementById('activityContainer');
-          container.innerHTML = ""; 
-          const registeredActivities = res.registered || [];
-
-          // 🌟 เช็คว่ามาจาก QR Code กิจกรรมเฉพาะหรือไม่ (เช็คคำว่า ?event=...)
-          const urlParams = new URLSearchParams(window.location.search);
-          const eventParam = urlParams.get('event');
-
-          // สร้างปุ่มหน้าแรกรอไว้ก่อน
-          res.data.forEach(activity => {
-            const btn = document.createElement('button');
-            const safeStatus = activity.status || ""; 
-            const checkStatus = safeStatus.trim();
-            const isClosed = checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ";
-            
-            const isRegistered = registeredActivities.includes(activity.name);
-            
-            if (isRegistered) {
-              btn.className = 'btn-activity registered';
-              btn.innerText = `✅ ${activity.name} (คุณลงทะเบียนแล้ว)`;
-            } else if (isClosed) {
-              btn.className = 'btn-activity closed';
-              btn.innerText = `📌 ${activity.name} (ปิดรับแล้ว)`;
-            } else {
-              btn.className = 'btn-activity';
-              btn.innerText = `📌 ${activity.name}`;
-            }
-            
-            btn.onclick = () => openRegistrationForm(activity, isRegistered);
-            container.appendChild(btn);
-          });
-
-          // 🌟 ถ้ามี eventParam ส่งมา ให้เด้งข้ามไปหน้าฟอร์มของกิจกรรมนั้นเลย
-          if (eventParam) {
-            // ค้นหากิจกรรมที่มีคำว่า event=... อยู่ในลิงก์คอลัมน์ H
-            const targetActivity = res.data.find(act => act.link.includes(`event=${eventParam}`));
-            if (targetActivity) {
-              const isRegistered = registeredActivities.includes(targetActivity.name);
-              openRegistrationForm(targetActivity, isRegistered);
-              
-              // ซ่อนปุ่มย้อนกลับ เพื่อไม่ให้คนสแกนหน้างานกดย้อนไปดูกิจกรรมอื่นได้
-              document.getElementById('btnBackToList').style.display = 'none';
-              
-              document.getElementById('loadingScreen').style.display = 'none';
-              return; // หยุดการทำงานตรงนี้เลย
-            }
+        if (res.status === 'success') {
+          
+          // 🌟 ดักจับคนนอก! ถ้าในชีต 08_DB ไม่มีชื่อคนๆ นี้ ให้บล็อกทันที
+          if (res.isUserRegistered === false) {
+            document.getElementById('loadingScreen').innerHTML = `
+              <h3 style="color: red;">❌ ไม่พบข้อมูลในระบบ</h3>
+              <p style="text-align: center; color: #333;">คุณยังไม่ได้ลงทะเบียนประวัติส่วนตัว<br>กรุณาลงทะเบียนผ่านเมนูหลักก่อนเข้าร่วมกิจกรรมครับ</p>
+              <br>
+              <button class="btn-back" onclick="liff.closeWindow()" style="background-color: #333; color: white;">ปิดหน้าต่างนี้</button>
+            `;
+            return; // 🛑 หยุดการทำงานทั้งหมดตรงนี้เลย
           }
 
-          // ถ้าไม่ได้สแกน QR Code (เข้าจากริชเมนูปกติ) ให้โชว์หน้า List ปกติ
-          document.getElementById('btnBackToList').style.display = 'block'; // มั่นใจว่าเปิดปุ่มย้อนกลับ
-          document.getElementById('loadingScreen').style.display = 'none';
-          document.getElementById('activityListScreen').style.display = 'block';
+          // ถ้าระบบเจอชื่อ ก็ให้แสดงกิจกรรมตามปกติ
+          if (res.data.length > 0) {
+            const container = document.getElementById('activityContainer');
+            container.innerHTML = ""; 
+            const registeredActivities = res.registered || [];
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventParam = urlParams.get('event');
+
+            res.data.forEach(activity => {
+              const btn = document.createElement('button');
+              const safeStatus = activity.status || ""; 
+              const checkStatus = safeStatus.trim();
+              const isClosed = checkStatus === "ปิดรับ" || checkStatus === "ปิด" || checkStatus === "ไม่เปิดรับ";
+              
+              const isRegistered = registeredActivities.includes(activity.name);
+              
+              if (isRegistered) {
+                btn.className = 'btn-activity registered';
+                btn.innerText = `✅ ${activity.name} (คุณลงทะเบียนแล้ว)`;
+              } else if (isClosed) {
+                btn.className = 'btn-activity closed';
+                btn.innerText = `📌 ${activity.name} (ปิดรับแล้ว)`;
+              } else {
+                btn.className = 'btn-activity';
+                btn.innerText = `📌 ${activity.name}`;
+              }
+              
+              btn.onclick = () => openRegistrationForm(activity, isRegistered);
+              container.appendChild(btn);
+            });
+
+            if (eventParam) {
+              const targetActivity = res.data.find(act => act.link.includes(`event=${eventParam}`));
+              if (targetActivity) {
+                const isRegistered = registeredActivities.includes(targetActivity.name);
+                openRegistrationForm(targetActivity, isRegistered);
+                document.getElementById('btnBackToList').style.display = 'none';
+                document.getElementById('loadingScreen').style.display = 'none';
+                return; 
+              }
+            }
+
+            document.getElementById('btnBackToList').style.display = 'block'; 
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('activityListScreen').style.display = 'block';
+          } else {
+            document.getElementById('loadingScreen').innerHTML = "<h3>ไม่มีกิจกรรมในขณะนี้</h3>";
+          }
         } else {
-          document.getElementById('loadingScreen').innerHTML = "<h3>ไม่มีกิจกรรมในขณะนี้</h3>";
+          document.getElementById('loadingScreen').innerHTML = `<h3 style="color:red;">Error จากเซิร์ฟเวอร์</h3>`;
         }
       } catch (error) {
         document.getElementById('loadingScreen').innerHTML = `<h3 style="color:red;">ดึงข้อมูลล้มเหลว: ${error.message}</h3>`;
