@@ -113,12 +113,22 @@
         const res = await response.json();
 
         if (res.status === 'success') {
-          statusDiv.innerText = "✅ บันทึกสำเร็จ! สวัสดีคุณ " + res.name;
-          statusDiv.style.color = "green";
+          // (โค้ดแจ้งเตือนสำเร็จ หรือเปลี่ยนริชเมนูของคุณที่ทำไว้ ปล่อยไว้เหมือนเดิม)
           
-          setTimeout(() => {
-            location.reload(); 
-          }, 2000);
+          // 🌟 เพิ่มโค้ดดักจับไม้ผลัดตรงนี้
+          const urlParams = new URLSearchParams(window.location.search);
+          const eventParam = urlParams.get('event');
+
+          if (eventParam) {
+            // ถ้ามี event ส่งมาด้วย (แปลว่าสแกน QR มา) ให้เด้งกลับไป LIFF กิจกรรมทันที!
+            // ⚠️ เปลี่ยนเป็น LIFF ID กิจกรรมของคุณ
+            window.location.href = "https://liff.line.me/ใส่_LIFF_ID_กิจกรรม_ที่นี่?event=" + eventParam;
+          } else {
+            // โฟลว์ปกติ (เข้าจากเมนู) โชว์หน้าข้อมูลผู้ใช้ตามเดิม
+            // (เอาโค้ดเดิมที่สั่งโชว์หน้าข้อมูลมาใส่ในปีกกานี้ครับ)
+            document.getElementById('registrationScreen').style.display = 'none';
+            document.getElementById('profileScreen').style.display = 'block'; 
+          }
 
         } else {
           statusDiv.innerText = "❌ " + res.message;
