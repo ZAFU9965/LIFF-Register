@@ -109,13 +109,24 @@
 
         if (res.status === 'success') {
           
-          // 🌟 ดักจับคนนอก! ถ้าในชีต 08_DB ไม่มีชื่อคนๆ นี้ ให้เด้งไปหน้าลงทะเบียนประวัติ (LIFF ตัวแรก) ทันที
+          // 🌟 ดักจับคนนอก!
           if (res.isUserRegistered === false) {
             document.getElementById('loadingScreen').innerHTML = `<h3 style="color: blue;">กำลังพาคุณไปหน้าลงทะเบียนประวัติ...</h3>`;
             
-            // ⚠️ เปลี่ยนลิงก์ด้านล่างนี้ เป็นลิงก์ LIFF ตัวแรกสุดของคุณ (ตัวที่ให้กรอกรหัสบัตรประชาชน)
-            window.location.href = "https://liff.line.me/2009162197-2HJEdiFz";
-            return; // 🛑 หยุดการทำงานของหน้ากิจกรรม
+            // ดึงค่า event เดิมที่สแกนมา
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventParam = urlParams.get('event');
+            
+            // ⚠️ เปลี่ยนเป็น LIFF ID ตัวแรก (ลงทะเบียนประวัติ)
+            let registerUrl = "https://liff.line.me/2009162197-2HJEdiFz";
+            
+            // ถ้าสแกน QR มา ให้ห้อยท้ายส่งไม้ผลัดไปด้วย
+            if (eventParam) {
+              registerUrl += "?event=" + eventParam;
+            }
+            
+            window.location.href = registerUrl;
+            return; 
           }
           
           // ถ้าระบบเจอชื่อ ก็ให้แสดงกิจกรรมตามปกติ
