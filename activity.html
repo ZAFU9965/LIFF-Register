@@ -46,8 +46,8 @@
       <h3 id="displayActivityName">ชื่อกิจกรรม</h3>
       
       <div class="activity-details">
-        <p><strong>📅 วันที่:</strong> <span id="dispDate"></span></p>
-        <p><strong>⏰ เวลา:</strong> <span id="dispTime"></span></p>
+        <p style="color: green;"><strong>🟢 เริ่ม:</strong> <span id="dispStartDate"></span> เวลา <span id="dispStartTime"></span></p>
+        <p style="color: red;"><strong>🔴 สิ้นสุด:</strong> <span id="dispEndDate"></span> เวลา <span id="dispEndTime"></span></p>
         <p><strong>📍 สถานที่:</strong> <span id="dispLoc"></span></p>
         <p id="dispDescContainer"><strong>📝 รายละเอียด:</strong> <span id="dispDesc"></span></p>
       </div>
@@ -190,8 +190,12 @@
       selectedActivity = activity.name;
       document.getElementById('displayActivityName').innerText = `กิจกรรม: ${activity.name}`;
       
-      document.getElementById('dispDate').innerText = activity.date;
-      document.getElementById('dispTime').innerText = activity.time;
+      // ดึงข้อมูล เริ่ม-สิ้นสุด มาโชว์
+      document.getElementById('dispStartDate').innerText = activity.date;
+      document.getElementById('dispStartTime').innerText = activity.time;
+      document.getElementById('dispEndDate').innerText = activity.endDate;
+      document.getElementById('dispEndTime').innerText = activity.endTime;
+      
       document.getElementById('dispLoc').innerText = activity.location;
       
       if (activity.desc && activity.desc.trim() !== "") {
